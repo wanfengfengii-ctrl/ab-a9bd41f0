@@ -1,0 +1,29 @@
+services:
+  web:
+    build: .
+    image: drainage-planner:latest
+    environment:
+      PORT: "8000"
+      QUIET_LOGS: "1"
+    ports:
+      # 宿主机端口可通过 .env 中的 HOST_PORT 配置（默认 8080）。
+      - "${HOST_PORT:-8080}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys,os; r=urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2); sys.exit(0 if r.status==200 else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+    restart: unless-stopped
+
+  verify:
+    build: .
+    image: drainage-planner:latest
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      BASE_URL: "http://web:8000"
+    # 一次性服务：完成测试、构建检查与 HTTP 冒烟后自行退出，退出码报告结果。
+    command: ["python", "scripts/verify.py"]
+    restart: "no"
