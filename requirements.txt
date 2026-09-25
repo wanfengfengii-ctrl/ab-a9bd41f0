@@ -1,0 +1,6 @@
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+pydantic>=2.7,<3.0
+# 以下两项供 verify 一次性服务运行测试与 HTTP 冒烟使用
+pytest>=8.0
+httpx>=0.27

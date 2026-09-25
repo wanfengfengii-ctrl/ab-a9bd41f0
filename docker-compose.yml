@@ -1,0 +1,41 @@
+# 排水泵轮换排程服务 Compose
+#
+# 宿主机端口可通过环境变量 HOST_PORT 配置（默认 8000）：
+#   HOST_PORT=9090 docker compose up --build
+# 或复制 .env.example 为 .env 后修改 HOST_PORT。
+
+services:
+  web:
+    build: .
+    image: drainage-plans:latest
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8000"
+    ports:
+      # 宿主机端口可配置，容器内固定监听 8000
+      - "${HOST_PORT:-8000}:8000"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import json,urllib.request,sys; r=urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2); sys.exit(0 if json.load(r).get('status')=='ok' else 1)"
+      interval: 10s
+      timeout: 3s
+      start_period: 8s
+      retries: 5
+
+  # 一次性校验服务：等待 web 健康后，运行代码测试、构建/导入检查及
+  # HTTP 冒烟，全部通过则以 0 退出，否则以非零退出码报告结果后自行退出。
+  # 也可单独执行：docker compose run --rm verify
+  verify:
+    build: .
+    image: drainage-plans:latest
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      BASE_URL: "http://web:8000"
+    entrypoint: ["/app/scripts/verify.sh"]
+    restart: "no"

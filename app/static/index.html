@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>沿海档案馆地下库 · 排水泵轮换排程</title>
+<style>
+  :root {
+    --ink: #1f2d3d;
+    --muted: #5d6b7a;
+    --line: #d7dee6;
+    --brand: #0f5e8c;
+    --brand-dark: #0a466a;
+    --bg: #eef3f7;
+    --card: #ffffff;
+    --ok: #1a7f4f;
+    --ok-bg: #e8f6ee;
+    --bad: #b3261e;
+    --bad-bg: #fdecea;
+    --warn: #9a6700;
+    --warn-bg: #fff7e0;
+    --idle: #6b7280;
+    --p1: #0f5e8c;
+    --p2: #7a3fa0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  header {
+    background: linear-gradient(135deg, var(--brand-dark), var(--brand));
+    color: #fff;
+    padding: 22px 28px;
+  }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: 1px; }
+  header p { margin: 6px 0 0; font-size: 13px; opacity: .85; }
+  main { max-width: 1080px; margin: 22px auto; padding: 0 18px 48px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(15, 40, 70, .06);
+  }
+  .card h2 {
+    margin: 0 0 14px;
+    font-size: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 16px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  input[type="number"] {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+  input[type="number"]:focus { outline: 2px solid rgba(15, 94, 140, .25); border-color: var(--brand); }
+  .inflow-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .inflow-cell small { display: block; text-align: center; color: var(--muted); font-size: 12px; }
+  .inflow-tools { margin-top: 12px; display: flex; gap: 10px; align-items: center; }
+  .pumps { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .pump-box { border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  .pump-box h3 { margin: 0 0 10px; font-size: 14px; }
+  .pump-box.p1 h3 { color: var(--p1); }
+  .pump-box.p2 h3 { color: var(--p2); }
+  .pump-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  button {
+    border: 0;
+    border-radius: 6px;
+    padding: 9px 18px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button.primary { background: var(--brand); color: #fff; }
+  button.primary:hover { background: var(--brand-dark); }
+  button.primary:disabled { background: #9bb6c7; cursor: wait; }
+  button.ghost { background: #eef2f6; color: var(--ink); border: 1px solid var(--line); }
+  button.ghost:hover { background: #e2e9f0; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .alert { border-radius: 8px; padding: 13px 16px; font-size: 14px; margin-bottom: 18px; display: none; }
+  .alert.show { display: block; }
+  .alert.bad { background: var(--bad-bg); color: var(--bad); border: 1px solid #f3c2be; }
+  .alert.ok { background: var(--ok-bg); color: var(--ok); border: 1px solid #bfe4cf; }
+  .alert ul { margin: 6px 0 0 18px; padding: 0; }
+  .summary { display: flex; flex-wrap: wrap; gap: 10px 26px; margin-bottom: 14px; }
+  .summary div { font-size: 14px; }
+  .summary b { font-size: 18px; font-variant-numeric: tabular-nums; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { border: 1px solid var(--line); padding: 7px 9px; text-align: center; font-variant-numeric: tabular-nums; }
+  th { background: #f4f7fa; color: var(--muted); font-weight: 600; }
+  .tag { display: inline-block; min-width: 52px; padding: 2px 10px; border-radius: 999px; font-size: 12px; color: #fff; }
+  .tag.idle { background: var(--idle); }
+  .tag.p1 { background: var(--p1); }
+  .tag.p2 { background: var(--p2); }
+  .chip { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 12px; }
+  .chip.ready { background: #e8f6ee; color: var(--ok); }
+  .chip.running { background: #e3f0f8; color: var(--p1); }
+  .chip.running.p2chip { background: #f1e8f8; color: var(--p2); }
+  .chip.cooling { background: var(--warn-bg); color: var(--warn); }
+  .out-danger { color: var(--bad); font-weight: 700; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 26px; }
+  @media (max-width: 720px) {
+    .pumps { grid-template-columns: 1fr; }
+    .inflow-row { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>沿海档案馆地下库 · 排水泵轮换排程</h1>
+  <p>暴潮暴雨期间按调度周期排空集水井 · 完整排程空间全局寻优，非单周期贪心</p>
+</header>
+
+<main>
+  <form id="plan-form" novalidate>
+    <section class="card">
+      <h2>来水与水位</h2>
+      <div class="grid">
+        <div>
+          <label for="initial-water">初始水量</label>
+          <input id="initial-water" type="number" name="initial_water" value="7" min="0" step="1" required />
+        </div>
+        <div>
+          <label for="safe-low">安全水位下限（闭区间）</label>
+          <input id="safe-low" type="number" name="safe_low" value="0" min="0" step="1" required />
+        </div>
+        <div>
+          <label for="safe-high">安全水位上限（闭区间）</label>
+          <input id="safe-high" type="number" name="safe_high" value="73" min="0" step="1" required />
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <label>按发生顺序的各周期整数来水量（6 至 12 个）</label>
+        <div id="inflow-row" class="inflow-row"></div>
+        <div class="inflow-tools">
+          <button type="button" class="ghost" id="add-inflow">＋ 增加周期</button>
+          <button type="button" class="ghost" id="remove-inflow">－ 减少周期</button>
+          <span class="hint" id="inflow-count"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>两台排水泵参数</h2>
+      <div class="pumps">
+        <div class="pump-box p1">
+          <h3>1 号泵</h3>
+          <div class="pump-grid">
+            <div><label>每周期排水量</label><input type="number" data-pump="0" data-field="discharge" value="35" min="1" step="1" required /></div>
+            <div><label>耗电量 / 周期</label><input type="number" data-pump="0" data-field="power" value="5" min="0" step="1" required /></div>
+            <div><label>停歇周期数</label><input type="number" data-pump="0" data-field="rest" value="1" min="0" step="1" required /></div>
+          </div>
+        </div>
+        <div class="pump-box p2">
+          <h3>2 号泵</h3>
+          <div class="pump-grid">
+            <div><label>每周期排水量</label><input type="number" data-pump="1" data-field="discharge" value="50" min="1" step="1" required /></div>
+            <div><label>耗电量 / 周期</label><input type="number" data-pump="1" data-field="power" value="10" min="0" step="1" required /></div>
+            <div><label>停歇周期数</label><input type="number" data-pump="1" data-field="rest" value="3" min="0" step="1" required /></div>
+          </div>
+        </div>
+      </div>
+      <p class="hint" style="margin-bottom:0;">
+        约束：每个周期至多运行一台泵；泵运行后必须停歇满指定周期数才可再次启动；每个周期末水量须落在安全水位闭区间内。
+        寻优顺序：累计耗电 → 全程最高水量 → 按泵编号排列的动作序列。
+      </p>
+    </section>
+
+    <div style="display:flex; gap:12px; align-items:center;">
+      <button type="submit" class="primary" id="submit-btn">生成排程方案</button>
+      <span class="hint">提交后调用真实的 POST /api/drainage-plans</span>
+    </div>
+  </form>
+
+  <div id="alert-bad" class="alert bad" role="alert"></div>
+  <div id="alert-ok" class="alert ok" role="status"></div>
+
+  <section class="card" id="result-card" style="display:none;">
+    <h2>排程结果（逐周期）</h2>
+    <div class="summary" id="summary"></div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>周期</th><th>来水量</th><th>动作</th><th>周期初水量</th><th>周期末水量</th>
+            <th>1 号泵状态</th><th>2 号泵状态</th><th>累计耗电</th>
+          </tr>
+        </thead>
+        <tbody id="result-body"></tbody>
+      </table>
+    </div>
+    <p class="hint" id="conclusion" style="margin-bottom:0; margin-top:12px;"></p>
+  </section>
+
+  <footer>排水泵轮换排程服务 · 全局穷举寻优 · Docker Compose 部署</footer>
+</main>
+
+<script>
+(() => {
+  const MIN_PERIODS = 6, MAX_PERIODS = 12;
+  const DEFAULT_INFLOWS = [30, 45, 50, 35, 20, 15, 10, 8];
+  const inflowRow = document.getElementById("inflow-row");
+  const inflowCount = document.getElementById("inflow-count");
+  const form = document.getElementById("plan-form");
+  const submitBtn = document.getElementById("submit-btn");
+  const alertBad = document.getElementById("alert-bad");
+  const alertOk = document.getElementById("alert-ok");
+  const resultCard = document.getElementById("result-card");
+  const resultBody = document.getElementById("result-body");
+  const summaryEl = document.getElementById("summary");
+  const conclusionEl = document.getElementById("conclusion");
+
+  let inflows = DEFAULT_INFLOWS.slice();
+
+  function clearAlertsAndPlan() {
+    // 无可行方案或输入非法：撤下旧方案并显示原因。
+    alertBad.className = "alert bad";
+    alertBad.innerHTML = "";
+    alertOk.className = "alert ok";
+    alertOk.innerHTML = "";
+    resultCard.style.display = "none";
+    resultBody.innerHTML = "";
+    summaryEl.innerHTML = "";
+    conclusionEl.textContent = "";
+  }
+
+  function renderInflows() {
+    inflowRow.innerHTML = "";
+    inflows.forEach((v, i) => {
+      const cell = document.createElement("div");
+      cell.className = "inflow-cell";
+      const input = document.createElement("input");
+      input.type = "number";
+      input.step = "1";
+      input.value = v;
+      input.setAttribute("aria-label", `第 ${i + 1} 周期来水量`);
+      input.addEventListener("input", () => { inflows[i] = input.value; });
+      const tag = document.createElement("small");
+      tag.textContent = `第 ${i + 1} 周期`;
+      cell.appendChild(input);
+      cell.appendChild(tag);
+      inflowRow.appendChild(cell);
+    });
+    inflowCount.textContent = `当前 ${inflows.length} 个周期（允许 ${MIN_PERIODS}–${MAX_PERIODS} 个）`;
+    document.getElementById("add-inflow").disabled = inflows.length >= MAX_PERIODS;
+    document.getElementById("remove-inflow").disabled = inflows.length <= MIN_PERIODS;
+  }
+
+  document.getElementById("add-inflow").addEventListener("click", () => {
+    if (inflows.length < MAX_PERIODS) { inflows.push(0); renderInflows(); }
+  });
+  document.getElementById("remove-inflow").addEventListener("click", () => {
+    if (inflows.length > MIN_PERIODS) { inflows.pop(); renderInflows(); }
+  });
+
+  function asInt(value, label, errors) {
+    if (value === "" || value === null || value === undefined || !/^[+-]?\d+$/.test(String(value).trim())) {
+      errors.push(`${label}必须填写整数`);
+      return null;
+    }
+    return Number(value);
+  }
+
+  function buildPayload() {
+    const errors = [];
+    const inflowValues = Array.from(inflowRow.querySelectorAll("input"))
+      .map((el, i) => asInt(el.value, `第 ${i + 1} 周期来水量`, errors));
+    const initial = asInt(form.initial_water.value, "初始水量", errors);
+    const safeLow = asInt(form.safe_low.value, "安全水位下限", errors);
+    const safeHigh = asInt(form.safe_high.value, "安全水位上限", errors);
+
+    const pumps = [];
+    for (const p of [0, 1]) {
+      const discharge = asInt(
+        form.querySelector(`input[data-pump="${p}"][data-field="discharge"]`).value,
+        `${p + 1} 号泵每周期排水量`, errors);
+      const power = asInt(
+        form.querySelector(`input[data-pump="${p}"][data-field="power"]`).value,
+        `${p + 1} 号泵耗电量`, errors);
+      const rest = asInt(
+        form.querySelector(`input[data-pump="${p}"][data-field="rest"]`).value,
+        `${p + 1} 号泵停歇周期数`, errors);
+      pumps.push({ discharge, power, rest });
+    }
+
+    if (errors.length) return { payload: null, errors };
+
+    const localErrors = [];
+    if (inflowValues.some(x => x < 0)) localErrors.push("来水量不能为负");
+    if (initial < 0) localErrors.push("初始水量不能为负");
+    if (safeLow < 0) localErrors.push("安全水位下限不能为负");
+    if (safeLow > safeHigh) localErrors.push("安全水位下限不能高于上限");
+    if (pumps.some(pp => pp.discharge <= 0)) localErrors.push("泵的每周期排水量必须为正整数");
+    if (pumps.some(pp => pp.power < 0)) localErrors.push("泵的耗电量不能为负");
+    if (pumps.some(pp => pp.rest < 0)) localErrors.push("泵的停歇周期数不能为负");
+    if (localErrors.length) return { payload: null, errors: localErrors };
+
+    return {
+      payload: {
+        inflows: inflowValues,
+        initial_water: initial,
+        safe_low: safeLow,
+        safe_high: safeHigh,
+        pumps,
+      },
+      errors: [],
+    };
+  }
+
+  function pumpChip(st) {
+    const cls = st.state === "running" && st.pump === 2
+      ? "chip running p2chip"
+      : `chip ${st.state}`;
+    let text;
+    if (st.state === "ready") {
+      text = st.state_label;
+    } else if (st.state === "running") {
+      text = st.cooldown_remaining > 0
+        ? `${st.state_label}（随后冷却 ${st.cooldown_remaining} 周期）`
+        : st.state_label;
+    } else {
+      text = st.cooldown_remaining > 0
+        ? `${st.state_label} 剩 ${st.cooldown_remaining} 周期`
+        : `${st.state_label}（下周期就绪）`;
+    }
+    return `<span class="${cls}">${text}</span>`;
+  }
+
+  function renderPlan(data) {
+    alertOk.className = "alert ok show";
+    alertOk.innerHTML = "已在完整排程空间中求得全局最优方案（依次最小化累计耗电、全程最高水量、动作序列）。";
+
+    const s = data.summary;
+    summaryEl.innerHTML = `
+      <div>周期数 <b>${s.periods}</b></div>
+      <div>累计耗电 <b>${s.total_power}</b></div>
+      <div>全程最高水量 <b>${s.max_water}</b></div>
+      <div>最终水量 <b>${s.final_water}</b></div>`;
+
+    resultBody.innerHTML = data.plan.map(row => {
+      const tagCls = row.action === 0 ? "idle" : (row.action === 1 ? "p1" : "p2");
+      return `<tr>
+        <td>${row.period}</td>
+        <td>${row.inflow}</td>
+        <td><span class="tag ${tagCls}">${row.action_label}</span></td>
+        <td>${row.start_water}</td>
+        <td>${row.end_water}</td>
+        <td>${pumpChip(row.pump_states[0])}</td>
+        <td>${pumpChip(row.pump_states[1])}</td>
+        <td>${row.total_power}</td>
+      </tr>`;
+    }).join("");
+    conclusionEl.textContent = data.conclusion;
+    resultCard.style.display = "block";
+  }
+
+  function showFailure(message, list) {
+    let html = `<strong>${message}</strong>`;
+    if (list && list.length) {
+      html += "<ul>" + list.map(m => `<li>${m}</li>`).join("") + "</ul>";
+    }
+    alertBad.innerHTML = html;
+    alertBad.className = "alert bad show";
+  }
+
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    clearAlertsAndPlan();
+
+    const { payload, errors } = buildPayload();
+    if (!payload) {
+      showFailure("输入非法，未发起请求：", errors);
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "求解中…";
+    try {
+      const resp = await fetch("/api/drainage-plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json().catch(() => null);
+      if (resp.status === 422 && data && data.reasons) {
+        showFailure("输入非法，旧方案已撤下：", data.reasons);
+        return;
+      }
+      if (!resp.ok || !data) {
+        showFailure(`服务异常（HTTP ${resp.status}），旧方案已撤下。`, null);
+        return;
+      }
+      if (!data.feasible) {
+        showFailure(data.reason || "无可行方案。", [data.conclusion].filter(Boolean));
+        return;
+      }
+      renderPlan(data);
+    } catch (err) {
+      showFailure(`无法连接排程服务：${err.message}`, null);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "生成排程方案";
+    }
+  });
+
+  renderInflows();
+})();
+</script>
+</body>
+</html>
